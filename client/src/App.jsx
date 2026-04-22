@@ -12,14 +12,16 @@ import ReviewResume from './pages/ReviewResume.jsx'
 import Community from './pages/Community.jsx'
 import { useAuth } from '@clerk/clerk-react'
 import { useEffect } from 'react'
+import {Toaster} from 'react-hot-toast'
 const App = () => {
-  const {getToken}=useAuth()
-  useEffect(()=>{
-    getToken().then((token)=>console.log(token));
+  // const {getToken}=useAuth()
+  // useEffect(()=>{
+  //   getToken().then((token)=>console.log(token));
   
-  },[])
+  // },[])
   return (
     <div>
+      <Toaster />
       <Routes>
         {/* Define your routes here */}
         <Route path='/' element={<Home />}/>

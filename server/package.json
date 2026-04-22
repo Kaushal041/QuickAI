@@ -12,18 +12,20 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@clerk/express": "^1.7.65",
+    "@clerk/express": "^1.7.77",
     "@google/generative-ai": "^0.24.1",
     "@neondatabase/serverless": "^1.0.2",
-    "axios": "^1.13.3",
+    "axios": "^1.13.6",
     "cloudinary": "^2.9.0",
     "cors": "^2.8.6",
-    "dotenv": "^17.2.3",
+    "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "multer": "^2.0.2",
-    "openai": "^6.16.0"
+    "form-data": "^4.0.5",
+    "multer": "^2.1.1",
+    "openai": "^6.32.0",
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.14"
   }
 }

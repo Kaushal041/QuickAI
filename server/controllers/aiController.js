@@ -265,11 +265,62 @@ import axios from "axios";
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import * as pdf from "pdf-parse";
+import mammoth from "mammoth";
 
 const AI = new OpenAI({
   apiKey: process.env.GEMINI_API_KEY,
   baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
 });
+
+const SUPPORTED_TEXT_MIME_TYPES = ['text/plain'];
+const SUPPORTED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const SUPPORTED_PDF_MIME_TYPES = ['application/pdf'];
+const SUPPORTED_DOCX_MIME_TYPES = ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+const SUPPORTED_CITATION_STYLES = ['APA', 'MLA', 'IEEE', 'Chicago', 'Harvard', 'Vancouver'];
+
+const isDocxFile = (file) => {
+  if (SUPPORTED_DOCX_MIME_TYPES.includes(file.mimetype)) return true;
+  return file?.originalname?.toLowerCase().endsWith('.docx');
+};
+
+const cleanupUploadedFiles = (files = []) => {
+  files.forEach((file) => {
+    try {
+      if (file?.path && fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
+    } catch {
+      // Ignore temp file cleanup failures.
+    }
+  });
+};
+
+const extractTextFromFile = async (file) => {
+  if (SUPPORTED_PDF_MIME_TYPES.includes(file.mimetype)) {
+    const buffer = fs.readFileSync(file.path);
+    const parsedPdf = await pdf(buffer);
+    return parsedPdf.text?.trim() || '';
+  }
+
+  if (isDocxFile(file)) {
+    const result = await mammoth.extractRawText({ path: file.path });
+    return result.value?.trim() || '';
+  }
+
+  if (SUPPORTED_TEXT_MIME_TYPES.includes(file.mimetype)) {
+    return fs.readFileSync(file.path, 'utf8').trim();
+  }
+
+  return '';
+};
+
+const uploadImagesAndGetUrls = async (files = []) => {
+  const imageFiles = files.filter((file) => SUPPORTED_IMAGE_MIME_TYPES.includes(file.mimetype));
+  const uploaded = await Promise.all(
+    imageFiles.map((file) => cloudinary.uploader.upload(file.path, { resource_type: 'image' }))
+  );
+  return uploaded.map((item) => item.secure_url);
+};
 
 
 // ✅ ================== GENERATE ARTICLE ==================
@@ -571,6 +622,124 @@ export const resumeReview = async (req, res) => {
     });
 
   } catch (error) {
+    console.log(error.message);
+    res.json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+// ✅ ================== GENERATE RESEARCH PAPER ==================
+export const generateResearchPaper = async (req, res) => {
+  const files = req.files || [];
+
+  try {
+    const { userId } = req.auth();
+    const { topic, requirements, citationStyle } = req.body;
+    const plan = req.plan;
+    const free_usage = req.free_usage;
+    const selectedCitationStyle = SUPPORTED_CITATION_STYLES.includes(citationStyle)
+      ? citationStyle
+      : 'APA';
+
+    if (!topic?.trim()) {
+      cleanupUploadedFiles(files);
+      return res.json({
+        success: false,
+        message: "Research topic is required"
+      });
+    }
+
+    if (plan !== 'premium' && free_usage >= 10) {
+      cleanupUploadedFiles(files);
+      return res.json({
+        success: false,
+        message: "Limit reached. Upgrade to continue."
+      });
+    }
+
+    const unsupportedFile = files.find((file) => {
+      const isText = SUPPORTED_TEXT_MIME_TYPES.includes(file.mimetype);
+      const isImage = SUPPORTED_IMAGE_MIME_TYPES.includes(file.mimetype);
+      const isPdf = SUPPORTED_PDF_MIME_TYPES.includes(file.mimetype);
+      const isDocx = isDocxFile(file);
+      return !isText && !isImage && !isPdf && !isDocx;
+    });
+
+    if (unsupportedFile) {
+      cleanupUploadedFiles(files);
+      return res.json({
+        success: false,
+        message: "Unsupported file type. Upload PDF, DOCX, TXT, JPG, JPEG, PNG, or WEBP files only."
+      });
+    }
+
+    const extractedTexts = await Promise.all(
+      files
+        .filter((file) => SUPPORTED_TEXT_MIME_TYPES.includes(file.mimetype) || SUPPORTED_PDF_MIME_TYPES.includes(file.mimetype) || isDocxFile(file))
+        .map(async (file) => {
+          const extracted = await extractTextFromFile(file);
+          return `Source: ${file.originalname}\n${extracted || '[No readable text found]'}`;
+        })
+    );
+
+    const imageUrls = await uploadImagesAndGetUrls(files);
+
+    const basePrompt = [
+      `Create a high-quality research paper on: ${topic}.`,
+      requirements?.trim() ? `Additional requirements: ${requirements.trim()}` : 'No additional requirements were provided.',
+      `Use ${selectedCitationStyle} citation style for in-text citations and references.`,
+      'Use only the supplied material where relevant. If evidence is missing, clearly state assumptions.',
+      'Return markdown with the following sections: Title, Abstract, Introduction, Methodology/Approach, Analysis, Findings, Limitations, Conclusion, and References.'
+    ].join('\n\n');
+
+    const textContext = extractedTexts.length
+      ? `Use these extracted file contents as source material:\n\n${extractedTexts.join('\n\n---\n\n')}`
+      : 'No text-based source files were uploaded.';
+
+    const userContent = [
+      {
+        type: 'text',
+        text: `${basePrompt}\n\n${textContext}`
+      },
+      ...imageUrls.map((url) => ({
+        type: 'image_url',
+        image_url: { url }
+      }))
+    ];
+
+    const response = await AI.chat.completions.create({
+      model: "gemini-3-flash-preview",
+      messages: [{ role: "user", content: userContent }],
+      temperature: 0.6,
+      max_tokens: 2500,
+    });
+
+    const content = response.choices?.[0]?.message?.content || "";
+
+    await sql`
+      INSERT INTO creations (user_id, prompt, content, type)
+      VALUES (${userId}, ${`Research paper: ${topic}`}, ${content}, 'research-paper')
+    `;
+
+    if (plan !== 'premium') {
+      await clerkClient.users.updateUserMetadata(userId, {
+        privateMetadata: {
+          free_usage: free_usage + 1
+        }
+      });
+    }
+
+    cleanupUploadedFiles(files);
+
+    res.json({
+      success: true,
+      content
+    });
+  } catch (error) {
+    cleanupUploadedFiles(files);
     console.log(error.message);
     res.json({
       success: false,

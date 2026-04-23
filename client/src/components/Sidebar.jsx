@@ -13,6 +13,7 @@ const navItems=[
     {to:'/ai',label:'Dashboard',Icon: House},
     {to:'/ai/write-article',label:'Write Article',Icon: SquarePen },
     {to:'/ai/blog-titles',label:'Blog Title',Icon: Hash},
+  {to:'/ai/research-paper',label:'Research Paper',Icon: FileText},
     {to:'/ai/generate-images',label:'Generate Images',Icon: Image},
     {to:'/ai/remove-background',label:'Remove Background',Icon: Eraser},
     {to:'/ai/remove-object',label:'Remove Object',Icon: Scissors},

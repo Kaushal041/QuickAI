@@ -36,6 +36,13 @@ export const AiToolsData = [
         path: '/ai/blog-titles'
     },
     {
+        title: 'Research Paper Generator',
+        description: 'Build a complete research paper from your topic, requirements, and uploaded files like PDF, TXT, and JPG.',
+        Icon: FileText,
+        bg: { from: '#2657E8', to: '#24A1F2' },
+        path: '/ai/research-paper'
+    },
+    {
         title: 'AI Image Generation',
         description: 'Create stunning visuals with our AI image generation tool, Experience the power of AI ',
         Icon: Image,

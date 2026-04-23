@@ -1,5 +1,15 @@
 // import sql from "../db.js";
 import sql from "../configs/db.js";
+
+export const getUserPlan = async (req, res) => {
+    try {
+        res.json({ success: true, plan: req.plan, subscription: req.subscription ?? null });
+    }
+    catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+}
+
 export const getUserCreations=async(req,res)=>{
     try {
         const { userId } =  req.auth();   
@@ -54,7 +64,7 @@ if(!creation){
 
     const formattedArray=`{${updatedLikes.join(',')}}`
 
-       await sql`UPDATE creations SET likes = ${formattedArray}:; text[] WHERE id = ${id}`;
+    await sql`UPDATE creations SET likes = ${formattedArray}::text[] WHERE id = ${id}`;
 
         
         res.json({ success: true,message });

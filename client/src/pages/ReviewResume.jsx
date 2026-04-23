@@ -50,7 +50,7 @@ formData,
        border-gray-200'>
         <div className='flex items-center gap-3'>
           <Sparkles className='w-6 text-[#00DA83]'/>
-          <h1 className='text-xl font-semibold'>Resume Reviewl </h1>
+          <h1 className='text-xl font-semibold'>Resume Review</h1>
         </div>
         <p className='mt-6 text-sm font-medium'>Upload Resume</p>
         <input onChange={(e)=>setInput(e.target.files[0])}  type="file"  accept='application/pdf' className='w-full p-2 px-3 mt-2 outline-none text-sm
@@ -74,7 +74,7 @@ Review Resume
        <div className='w-full max-w-lg p-4 bg-white rounded-lg border flex flex-col border-gray-200 min-h-96 max-h-[600px]'>
  <div className='flex items-center gap-3'>
 <FileText className='w-6 h-5 text-[#00DA83]'/>
-<h1 className='text-xl font-semibold'>Analysis Resultse</h1>
+<h1 className='text-xl font-semibold'>Analysis Results</h1>
  </div>
  {
      !content ? (<div className='flex-1 flex justify-center items-center'>
@@ -84,7 +84,7 @@ Review Resume
        </div>
  </div>):
  (
-  <div className='mt-3 h-full overflow-y-scroll text-smtext-slate-600'>
+  <div className='mt-3 h-full overflow-y-scroll text-sm text-slate-600'>
     <div className='reset-tw'>
       <Markdown>{content}</Markdown>
     </div>

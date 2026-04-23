@@ -8,11 +8,13 @@ import { requireAuth } from '@clerk/express';
 import aiRouter from './routes/aiRoutes.js';
 import connectCloudinary from './configs/cloudinary.js';
 import userRouter from './routes/userRoutes.js';
+import { handleClerkWebhook } from './controllers/clerkWebhookController.js';
 
 
 const app = express();
 await connectCloudinary();
 app.use(cors())
+app.post('/api/webhooks/clerk', express.raw({ type: 'application/json' }), handleClerkWebhook)
 app.use(express.json())
 app.use(clerkMiddleware())
 

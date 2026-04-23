@@ -1,7 +1,10 @@
-import { Protect,useClerk, useUser } from '@clerk/clerk-react';
+import { useAuth, useClerk, useUser } from '@clerk/clerk-react';
 import { House, SquarePen, Hash,Image, Eraser, Scissors, FileText, Users, LogOut } from 'lucide-react';
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom';
+import axios from 'axios';
+
+axios.defaults.baseURL=import.meta.env.VITE_BASE_URL;
 
 
 
@@ -18,7 +21,46 @@ const navItems=[
 ]
 const Sidebar = ({sidebar,setSidebar}) => {
     const {user}=useUser();
+    const { getToken } = useAuth();
     const {signOut,openUserProfile}=useClerk();
+    const [plan, setPlan] = useState('free');
+
+    useEffect(() => {
+      const fetchPlan = async () => {
+        try {
+          const token = await getToken();
+          const { data } = await axios.get('/api/user/get-user-plan', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (data.success) {
+            setPlan(data.plan);
+          }
+        } catch {
+          setPlan('free');
+        }
+      };
+
+      if (user) {
+        fetchPlan();
+      }
+      const refreshOnFocus = () => {
+        if (user) {
+          fetchPlan();
+        }
+      }
+
+      window.addEventListener('focus', refreshOnFocus)
+      document.addEventListener('visibilitychange', refreshOnFocus)
+
+      return () => {
+        window.removeEventListener('focus', refreshOnFocus)
+        document.removeEventListener('visibilitychange', refreshOnFocus)
+      }
+    }, [user, getToken]);
+
   return (
     <div className={`w-60 bg-white border-r border-gray-200 flex flex-col
     justify-between items-center max-sm:absolute top-14 bottom-0 ${sidebar ? 'translate-x-0':'max-sm:-translate-x-full'} transition-all duration-300
@@ -47,9 +89,7 @@ justify-between'>
   <div>
     <h1 className='text-sm font-medium'>{user.fullName}</h1>
     <p className='text-xs text-gray-500'>
-     <Protect plan='premium' fallback='Free'>
-       Premium
-     </Protect>
+     {plan === 'premium' ? 'Premium' : 'Free'}
      Plan
     </p>
   </div>

@@ -1,7 +1,5 @@
 import React , { useState, useEffect } from 'react'
-import { dummyCreationData } from '../assets/assets'
 import { Sparkles } from 'lucide-react'
-import { Protect } from '@clerk/clerk-react'
 import { Gem } from 'lucide-react'
 import CreationItem from '../components/CreationItem.jsx'
 import axios from 'axios';
@@ -12,22 +10,35 @@ axios.defaults.baseURL=import.meta.env.VITE_BASE_URL;
 
 const Dashboard = () => {
   const [creations,setCreations]=useState([])
+  const [plan,setPlan]=useState('free')
   const [loading,setLoading]=useState(true)
   const{getToken}=useAuth()
 
   const getDashboardData=async()=>{
     // setCreations(dummyCreationData) //fetch and set creations
     try{
-const {data}=await axios.get('/api/user/get-user-creations',{
+const token = await getToken()
+const [creationsRes, planRes] = await Promise.all([
+  axios.get('/api/user/get-user-creations',{
           headers:{
-            Authorization: `Bearer ${await getToken()}`,
+            Authorization: `Bearer ${token}`,
           }
-})
-        if(data.success){
-          setCreations(data.creations)
+}),
+  axios.get('/api/user/get-user-plan',{
+    headers:{
+      Authorization: `Bearer ${token}`,
+    }
+  })
+])
+        if(creationsRes.data.success){
+          setCreations(creationsRes.data.creations)
         }
         else{
-          toast.error(data.message)
+          toast.error(creationsRes.data.message)
+        }
+
+        if (planRes.data.success) {
+          setPlan(planRes.data.plan)
         }
     }
     catch(error){
@@ -37,6 +48,14 @@ const {data}=await axios.get('/api/user/get-user-creations',{
   }
   useEffect(()=>{
     getDashboardData()
+    const refreshOnFocus = () => getDashboardData()
+    window.addEventListener('focus', refreshOnFocus)
+    document.addEventListener('visibilitychange', refreshOnFocus)
+
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus)
+      document.removeEventListener('visibilitychange', refreshOnFocus)
+    }
   },[])
   return (
     <div className='h-full overflow-y-scroll p-6'>
@@ -58,7 +77,7 @@ to-[#0BB0D7] text-white flex justify-center items-center'>
 <div className='text-slate-600'>
   <p className='text-sm'>Active Plan</p>
   <h2 className='text-xl font-semibold'>
-    <Protect plan='premium' fallback="Free">Premium</Protect>
+    {plan === 'premium' ? 'Premium' : 'Free'}
   </h2>
 </div>
 <div className='w-10 h-10 rounded-lg bg-gradient-to-br from-[#FF61C5]

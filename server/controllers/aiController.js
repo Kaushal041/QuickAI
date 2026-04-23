@@ -395,17 +395,23 @@ export const generateImage = async (req, res) => {
       });
     }
 
+    if (!process.env.STABILITY_API_KEY) {
+      throw new Error("STABILITY_API_KEY is missing in server .env");
+    }
+
     const formData = new FormData();
     formData.append('prompt', prompt);
+    formData.append('output_format', 'png');
 
     const { data } = await axios.post(
-      "https://clipdrop-api.co/text-to-image/v1",
+      'https://api.stability.ai/v2beta/stable-image/generate/core',
       formData,
       {
         headers: {
-          'x-api-key': process.env.CLIPDROP_API_KEY,
+          Authorization: `Bearer ${process.env.STABILITY_API_KEY}`,
+          Accept: 'image/*'
         },
-        responseType: "arraybuffer",
+        responseType: 'arraybuffer'
       }
     );
 

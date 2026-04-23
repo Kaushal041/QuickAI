@@ -12,7 +12,7 @@ const WriteArticle = () => {
 
 const articleLength=[
   {length: 800, text: 'Short (500-800 words)'},
-    {length: 120000, text: 'Medium (800-1200 words)'},
+    {length: 1200, text: 'Medium (800-1200 words)'},
       {length: 1600, text: 'long (1200+ words)'},
 ]
 

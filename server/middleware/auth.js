@@ -5,6 +5,16 @@ export const auth = async (req, res, next) => {
   try {
     const { userId } = await req.auth();
 
+    // In development allow a quick bypass when testing without real Clerk users.
+    if (process.env.NODE_ENV !== 'production' && req.headers['x-dev-bypass'] === 'true') {
+      console.log('auth middleware: dev-bypass detected for userId', userId);
+      req.plan = req.plan || 'premium';
+      req.free_usage = req.free_usage ?? 0;
+      return next();
+    }
+
+    console.log('auth middleware: fetching Clerk user for', userId);
+
     const user = await clerkClient.users.getUser(userId);
 
     let subscription = null;
